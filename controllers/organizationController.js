@@ -108,17 +108,17 @@ export const loginOrganization = async (req, res) => {
                 name: user.name,
                 email: user.email,
                 user_id: user.user_id,
-            },
-            organization: {
-                id: user.organization._id,
-                name: user.organization.name,
-                slug: user.organization.slug,
-                type: user.organization.type,
+                organization: {
+                    id: user.organization._id,
+                    name: user.organization.name,
+                    slug: user.organization.slug,
+                    type: user.organization.type,
+                },
             },
         }));
 
     } catch (err) {
-        console.log("Error",err);
+        console.log("Error", err);
         res.status(500).json(sendError(err.message || 'Server error.'));
     }
 }
