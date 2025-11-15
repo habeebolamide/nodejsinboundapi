@@ -1,4 +1,8 @@
+import { sendError, sendResponse } from "../helpers/helper.js";
 import Users from "../models/users.js";
+import bcrypt from 'bcryptjs';
+import { signToken } from "../utils/jwt.js";
+
 
 export const Login = async (req, res) => {
     const { email, password } = req.body;
@@ -37,6 +41,6 @@ export const Login = async (req, res) => {
     } catch (error) {
         // Handle any potential errors
         console.error(error);
-        res.status(500).json(sendError('Something went wrong, please try again later.'));
+        res.status(500).json(sendError(error.message || 'Server Error'));
     }
 };
