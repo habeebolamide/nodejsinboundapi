@@ -4,7 +4,6 @@ import { validateCreateOrganization } from '../middleware/validateOrganization.j
 import { createOrganization, getOrganizationSupervisors, getSupervisors, loginOrganization, uploadSupervisors } from '../controllers/organizationController.js';
 import { upload } from '../middleware/upload.js';
 import { protect } from '../middleware/auth.js';
-import { get } from 'http';
 
 const router = express.Router();
 

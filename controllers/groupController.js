@@ -5,7 +5,6 @@ import User from '../models/users.js';
 import { parseCSV } from '../utils/csvParser.js';
 import bcrypt from 'bcryptjs';
 import fs from 'fs';
-import path from 'path';
 import { sendError, sendResponse } from '../helpers/helper.js';
 import mongoose from 'mongoose';
 
