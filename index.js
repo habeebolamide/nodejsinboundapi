@@ -2,6 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import organizationRoutes from './routes/organization.js';
+import authRoutes from './routes/auth.js';
 import cors from 'cors';
 
 // Load environment variables
@@ -14,6 +15,7 @@ app.use(cors());
 
 // Use organization routes
 app.use('/api/v1/organization', organizationRoutes);
+app.use('/api/v1/auth', authRoutes);
 
 
 // Set the port from environment variables or default to 3000

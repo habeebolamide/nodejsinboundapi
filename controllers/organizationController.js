@@ -118,7 +118,7 @@ export const loginOrganization = async (req, res) => {
         }));
 
     } catch (err) {
-        console.error(err);
-        res.status(500).json(sendError('Server error.'));
+        console.log("Error",err);
+        res.status(500).json(sendError(err.message || 'Server error.'));
     }
 }
