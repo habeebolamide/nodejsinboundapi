@@ -13,7 +13,7 @@ const router = express.Router();
 router
     .post('/create', rateLimiter, validateCreateOrganization,createOrganization)
     .post('/login',rateLimiter,loginOrganization)
-    .post('/supervisors/upload',protect, rateLimiter,upload.single('file'),uploadSupervisors)
+    .post('/supervisors/upload',protect, rateLimiter,upload.single('supervisor_csv'),uploadSupervisors)
     .get('/supervisors/getSupervisors',protect, rateLimiter,getSupervisors)
     .get('/supervisors/getOrganizationSupervisors',protect, rateLimiter,getOrganizationSupervisors);
 

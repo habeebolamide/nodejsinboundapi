@@ -128,7 +128,7 @@ export const loginOrganization = async (req, res) => {
 }
 
 export const uploadSupervisors = async (req, res) => {
-    const file = req.file;
+    const file = req.supervisor_csv;
     if (!file) return res.status(400).json(sendError('File is required'));
 
     try {
