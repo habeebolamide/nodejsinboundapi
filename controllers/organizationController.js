@@ -5,6 +5,10 @@ import bcrypt from 'bcryptjs';
 import { signToken } from '../utils/jwt.js';
 import { validationResult } from 'express-validator';
 import { sendResponse, sendError } from '../helpers/helper.js';
+import { parseCSV } from '../utils/csvParser.js';
+import Group from '../models/group.js';
+import mongoose from 'mongoose';
+import fs from 'fs';
 
 
 export const createOrganization = async (req, res) => {
@@ -120,5 +124,109 @@ export const loginOrganization = async (req, res) => {
     } catch (err) {
         console.log("Error", err);
         res.status(500).json(sendError(err.message || 'Server error.'));
+    }
+}
+
+export const uploadSupervisors = async (req, res) => {
+    const file = req.file;
+    if (!file) return res.status(400).json(sendError('File is required'));
+
+    try {
+        const authUser = req.user;
+        const filePath = file.path;
+        const rows = await parseCSV(filePath);
+
+        if (rows.length === 0) {
+            fs.unlinkSync(filePath);
+            return res.status(400).json(sendError('CSV is empty'));
+        }
+
+        const group = await Group.create({
+            name: "Supervisors",
+            organization: authUser.organization,
+            total_members: 0,
+        });
+
+        let imported = 0;
+        const userType = await mongoose.model('UserType').findOne({ name: 'supervisor' });
+
+
+        for (const row of rows) {
+            const cleanRow = Object.fromEntries(
+                Object.entries(row).map(([k, v]) => [k.toLowerCase().trim(), v.trim()])
+            );
+
+            if (!cleanRow.name || !cleanRow.email || !cleanRow.user_id) {
+                console.warn('Skipped row (missing fields):', cleanRow);
+                continue;
+            }
+
+            const exists = await User.findOne({
+                $or: [{ email: cleanRow.email }, { user_id: cleanRow.user_id }],
+            });
+            if (exists) {
+                console.warn('Skipped duplicate:', cleanRow.email);
+                continue;
+            }
+
+            const user = await User.create({
+                name: cleanRow.name,
+                email: cleanRow.email,
+                user_id: cleanRow.user_id,
+                password: bcrypt.hashSync('12345678', 10),
+                organization: authUser.organization,
+                userType: userType._id,
+                groups: [group._id],
+            });
+
+            await Group.updateOne(
+                { _id: group._id },
+                { $push: { users: user._id }, $inc: { total_members: 1 } }
+            );
+
+            imported++;
+        }
+
+        fs.unlinkSync(filePath); 
+
+        res.status(201).json(sendResponse('Supervisors uploaded successfully', { imported_users: imported }, 201));
+    } catch (err) {
+        console.error(err);
+        res.status(500).json(sendError(err.message));
+    }
+}
+
+export const getSupervisors = async (req, res) => {
+    try {
+        const authUser = req.user;
+        const supervisorType = await mongoose.model('UserType').findOne({ name: 'supervisor' });
+
+        const supervisors = await User.find({
+            organization: authUser.organization,
+            userType: supervisorType._id,
+        }).select('-password');
+
+        res.status(200).json(sendResponse('Supervisors fetched successfully', { supervisors }));
+    } catch (err) {
+        console.error(err);
+        res.status(500).json(sendError(err.message));
+    }
+}
+
+export const getOrganizationSupervisors = async (req, res) => {
+    try {
+        const authUser = req.user;
+
+        const supervisorType = await mongoose.model('UserType').findOne({ name: 'supervisor' });
+
+        const supervisors = await User.find({
+            organization: authUser.organization,
+            userType: supervisorType._id,
+        }).select('-password');
+
+         res.status(200).json(sendResponse('Supervisors fetched successfully', { supervisors }));
+    } catch (err) {
+        console.error(err);
+        res.status(500).json(sendError(err.message));
     }
 }
