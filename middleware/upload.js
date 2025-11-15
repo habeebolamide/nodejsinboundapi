@@ -2,6 +2,9 @@ import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 
+// Get the current directory using import.meta.url
+const __dirname = new URL('.', import.meta.url).pathname;
+
 // Ensure uploads directory exists
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
