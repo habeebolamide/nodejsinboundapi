@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import organizationRoutes from './routes/organization.js';
 import authRoutes from './routes/auth.js';
 import groupRoutes from './routes/groups.js';
+import checkinRoutes from './routes/sessions.js';
 import cors from 'cors';
 
 dotenv.config();
@@ -16,6 +17,7 @@ app.use(cors());
 app.use('/api/v1/organization', organizationRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/organization/groups', groupRoutes);
+app.use('/api/v1/organization/checkin', checkinRoutes);
 
 
 // Set the port from environment variables or default to 3000
