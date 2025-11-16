@@ -1,6 +1,6 @@
 import Group from "../models/group.js";
 import User from "../models/users.js";
-import AttendanceSession from "../models/attendancesession.js";
+import AttendanceSession from "../models/attendanceSession.js";
 import { sendError, sendResponse } from "../helpers/helper.js";
 import GroupUser from "../models/groupUser.js";
 
@@ -13,7 +13,6 @@ export const createSession = async (req, res) => {
     if (!groups) {
         return res.status(403).json({ message: 'Invalid group for your organization.' });
     }
-
 
     const supervisors = await User.findOne({ _id: supervisor, organization: authUser.organization });
     if (!supervisors) {

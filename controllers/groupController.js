@@ -7,7 +7,7 @@ import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import { sendError, sendResponse } from '../helpers/helper.js';
 import mongoose from 'mongoose';
-import groupUser from '../models/groupUser.js';
+import GroupUser from '../models/groupUser.js';
 
 
 // CREATE GROUP + IMPORT CSV
@@ -29,10 +29,11 @@ export const createGroupWithCSV = async (req, res) => {
       return res.status(400).json(sendError('CSV is empty'));
     }
 
+    // Create the group
     const group = await Group.create({
       name,
       organization: authUser.organization,
-      total_members: 0,
+      total_members: 0,  // Initially set to 0
     });
 
     let imported = 0;
@@ -51,44 +52,66 @@ export const createGroupWithCSV = async (req, res) => {
       const exists = await User.findOne({
         $or: [{ email: cleanRow.email }, { user_id: cleanRow.user_id }],
       });
+
       if (exists) {
-        console.warn('Skipped duplicate:', cleanRow.email);
-        continue;
+        console.warn('User already exists, attaching to group:', cleanRow.email);
+
+        // Attach the existing user to the group (if they are not already part of the group)
+        const alreadyInGroup = await GroupUser.findOne({
+          group: group._id,
+          user: exists._id,
+        });
+
+        if (!alreadyInGroup) {
+          await GroupUser.create({
+            group: group._id,
+            user: exists._id,
+          });
+
+          // Increment total_members when the user is added to the group (existing user)
+          await Group.updateOne(
+            { _id: group._id },
+            { $inc: { total_members: 1 } }
+          );
+        }
+      } else {
+        // Create a new user if they don't exist
+        const user = await User.create({
+          name: cleanRow.name,
+          email: cleanRow.email,
+          user_id: cleanRow.user_id,
+          password: bcrypt.hashSync('12345678', 10),
+          organization: authUser.organization,
+          userType: studentType._id,
+          groups: [group._id],
+        });
+
+        await GroupUser.create({
+          group: group._id,
+          user: user._id,
+        });
+
+        // Increment total_members when the new user is created and added to the group
+        await Group.updateOne(
+          { _id: group._id },
+          { $inc: { total_members: 1 } }
+        );
+
+        imported++;
       }
-
-      const user = await User.create({
-        name: cleanRow.name,
-        email: cleanRow.email,
-        user_id: cleanRow.user_id,
-        password: bcrypt.hashSync('12345678', 10),
-        organization: authUser.organization,
-        userType: studentType._id,
-        groups: [group._id],
-      });
-
-      await groupUser.create({
-        group: group._id,
-        user: user._id,
-      });
-
-      await Group.updateOne(
-        { _id: group._id },
-        { $inc: { total_members: 1 } }
-      );
-
-      imported++;
     }
 
     // Cleanup
     fs.unlinkSync(filePath);
 
-    res.status(201).json(sendResponse('Group created & users imported', { imported_users: imported }, 201));
+    res.status(201).json(sendResponse('Group created & users imported'));
   } catch (err) {
     if (req.file) fs.unlinkSync(req.file.path);
     console.error(err);
     res.status(500).json(sendError('Import failed', { error: err.message }));
   }
 };
+
 
 // GET ALL GROUPS (with users)
 export const getAllGroups = async (req, res) => {
