@@ -3,7 +3,7 @@ import User from "../models/users.js";
 import AttendanceSession from "../models/attendanceSession.js";
 import { sendError, sendResponse } from "../helpers/helper.js";
 import GroupUser from "../models/groupUser.js";
-
+import Checkin from "../models/checkin.js";
 
 export const createSession = async (req, res) => {
     const { group, supervisor, title, latitude, longitude, radius, start_time, end_time, building_name } = req.body;
@@ -42,7 +42,7 @@ export const getAll = async (req, res) => {
     try {
         const authUser = await User.findById(authUserid).populate('userType');
 
-        
+
         const groupUsers = await GroupUser.find({ user: authUser._id }).populate('group');
         const groupIds = groupUsers.map(groupUser => groupUser.group._id);
 
@@ -65,42 +65,46 @@ export const getAll = async (req, res) => {
 
     } catch (err) {
         // Handle errors
-        return res.status(500).json({
-            message: 'Internal Server Error',
-            error: err.message
-        });
+        res.status(500).json(sendError(err.message));
     }
 }
 
 export const getTodaySessions = async (req, res) => {
     try {
-        const authUser = req.user;
-        const today = moment().startOf('day').toDate(); 
+        const user = req.user;
+        if (!user?.organization) return res.status(401).json(sendResponse('Unauthorized', null, 401));
+
+        // UTC+1 Today: 00:00 to 23:59:59.999
+        const now = new Date();
+        const offset = 60; // UTC+1 in minutes
+        const today = new Date(now.getTime() + offset * 60000);
+        today.setUTCHours(0, 0, 0, 0);
+        const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
 
         const sessions = await AttendanceSession.find({
-            organization_id: authUser.organization_id,
-            start_time: { $gte: today, $lt: moment(today).endOf('day').toDate() }
+            organization_id: user.organization_id,
+            start_time: { $gte: today, $lt: tomorrow }
         })
-        .populate('group')
-        .populate('supervisor')
-        .sort({ start_time: 1 }); 
+            .populate('group supervisor')
+            .sort({ start_time: 1 })
+            .lean(); // Important: returns plain JS objects
 
-        const sessionsWithCheckinStatus = await Promise.all(sessions.map(async (session) => {
-            const checkin = await Checkin.findOne({
-                user_id: authUser.id,
-                attendance_session_id: session._id,
-                created_at: { $gte: moment().startOf('day').toDate(), $lt: moment().endOf('day').toDate() }
-            });
+        // Add checkin_status in parallel
+        const results = await Promise.all(
+            sessions.map(async (s) => {
+                const hasCheckin = await Checkin.exists({
+                    user_id: user._id,
+                    attendance_session_id: s._id,
+                    created_at: { $gte: today, $lt: tomorrow }
+                });
+                s.checkin_status = hasCheckin ? 'yes' : 'no';
+                return s;
+            })
+        );
 
-            session.checkin_status = checkin ? 'yes' : 'no';
-
-            return session;
-        }));
-
-        return sendResponse(res, 'Today\'s sessions retrieved successfully.', sessionsWithCheckinStatus, 200);
+        res.json(sendResponse("Today's sessions retrieved successfully.", results));
     } catch (err) {
         console.error(err);
-        return sendResponse(res, 'Error retrieving sessions.', null, 500);
+        res.status(500).json(sendResponse('Server error', null, 500));
     }
 };
-
