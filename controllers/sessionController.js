@@ -46,8 +46,6 @@ export const getAll = async (req, res) => {
         const groupUsers = await GroupUser.find({ user: authUser._id }).populate('group');
         const groupIds = groupUsers.map(groupUser => groupUser.group._id);
 
-        console.log(groupIds);
-
         let sessionsQuery = AttendanceSession.find({ organization: authUser.organization })
             // .populate('group')
             // .populate('supervisor')
@@ -55,7 +53,11 @@ export const getAll = async (req, res) => {
 
         if (authUser.userType.name === 'supervisor') {
             sessionsQuery = sessionsQuery.where('supervisor').equals(authUser._id);
-        } else if (authUser.userType.name === 'member') {
+        } 
+        if (authUser.userType.name === 'admin') {
+            sessionsQuery = sessionsQuery.populate('group').populate('supervisor');
+        }
+        else if (authUser.userType.name === 'member') {
             sessionsQuery = sessionsQuery.where('group').in(groupIds);
         }
 
