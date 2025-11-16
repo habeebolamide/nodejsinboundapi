@@ -108,3 +108,21 @@ export const getTodaySessions = async (req, res) => {
         res.status(500).json(sendResponse('Server error', null, 500));
     }
 };
+
+export const getAllSessionForSupervisor = async (req, res) => {
+    try {
+        const authUser = req.user;
+
+        const sessions = await AttendanceSession.find({
+            organization: authUser.organization,
+            supervisor: authUser.id
+        })
+            .populate('group')
+            .populate('supervisor')
+            .sort({ start_time: -1 });
+
+        res.status(200).json(sendResponse('Sessions fetched successfully.', sessions));
+    } catch (err) {
+        res.status(500).json(sendError(err.message));
+    }
+}
