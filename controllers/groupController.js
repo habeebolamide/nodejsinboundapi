@@ -87,10 +87,10 @@ export const createGroupWithCSV = async (req, res) => {
 // GET ALL GROUPS (with users)
 export const getAllGroups = async (req, res) => {
   try {
-    const groups = await Group.find().populate('users', 'name email user_id');
+    const groups = await Group.find();
     res.json(sendResponse('Groups retrieved', groups));
   } catch (err) {
-    res.status(500).json(sendError('Server error'));
+    res.status(500).json(sendError(err.message));
   }
 };
 
