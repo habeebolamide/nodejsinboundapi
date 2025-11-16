@@ -7,6 +7,7 @@ import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import { sendError, sendResponse } from '../helpers/helper.js';
 import mongoose from 'mongoose';
+import groupUser from '../models/groupUser.js';
 
 
 // CREATE GROUP + IMPORT CSV
@@ -65,9 +66,14 @@ export const createGroupWithCSV = async (req, res) => {
         groups: [group._id],
       });
 
+      await groupUser.create({
+        group: group._id,
+        user: user._id,
+      });
+
       await Group.updateOne(
         { _id: group._id },
-        { $push: { users: user._id }, $inc: { total_members: 1 } }
+        { $inc: { total_members: 1 } }
       );
 
       imported++;

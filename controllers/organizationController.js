@@ -7,6 +7,7 @@ import { validationResult } from 'express-validator';
 import { sendResponse, sendError } from '../helpers/helper.js';
 import { parseCSV } from '../utils/csvParser.js';
 import Group from '../models/group.js';
+import GroupUser from '../models/groupUser.js';
 import mongoose from 'mongoose';
 import fs from 'fs';
 
@@ -48,9 +49,7 @@ export const createOrganization = async (req, res) => {
         // 4. Generate JWT
         const token = signToken({
             id: user._id,
-            email: user.email,
             organization: organization._id,
-            role: 'admin',
         });
 
         // 5. Respond
@@ -128,8 +127,6 @@ export const loginOrganization = async (req, res) => {
 }
 
 export const uploadSupervisors = async (req, res) => {
-    console.log(req);
-    
     const file = req.file;
     if (!file) return res.status(400).json(sendError('File is required'));
 
@@ -181,15 +178,20 @@ export const uploadSupervisors = async (req, res) => {
                 groups: [group._id],
             });
 
+            await GroupUser.create({
+                group: group._id,
+                user: user._id,
+            });
+
             await Group.updateOne(
                 { _id: group._id },
-                { $push: { users: user._id }, $inc: { total_members: 1 } }
+                { $inc: { total_members: 1 } }
             );
 
             imported++;
         }
 
-        fs.unlinkSync(filePath); 
+        fs.unlinkSync(filePath);
 
         res.status(201).json(sendResponse('Supervisors uploaded successfully', { imported_users: imported }, 201));
     } catch (err) {
@@ -226,7 +228,7 @@ export const getOrganizationSupervisors = async (req, res) => {
             userType: supervisorType._id,
         }).select('-password');
 
-         res.status(200).json(sendResponse('Supervisors fetched successfully', { supervisors }));
+        res.status(200).json(sendResponse('Supervisors fetched successfully', { supervisors }));
     } catch (err) {
         console.error(err);
         res.status(500).json(sendError(err.message));

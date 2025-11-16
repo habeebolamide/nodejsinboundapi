@@ -3,7 +3,7 @@ import rateLimit from 'express-rate-limit';
 
 export const rateLimiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 15 minutes
-  max: 3, // limit each IP to 5 org creations per window
+  max: 5, // limit each IP to 5 org creations per window
   message: {
     success: false,
     message: 'Too many attempts. Try again later.',
