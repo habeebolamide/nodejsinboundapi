@@ -49,8 +49,8 @@ export const getAll = async (req, res) => {
         console.log(groupIds);
 
         let sessionsQuery = AttendanceSession.find({ organization: authUser.organization })
-            .populate('group')
-            .populate('supervisor')
+            // .populate('group')
+            // .populate('supervisor')
             .sort({ start_time: -1 });
 
         if (authUser.userType.name === 'supervisor') {
