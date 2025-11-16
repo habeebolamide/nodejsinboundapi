@@ -3,17 +3,17 @@ import mongoose from "mongoose";
 const attendanceSessionSchema = new mongoose.Schema({
     organization: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Organization',              
+        ref: 'Organization',
         required: true,
     },
-    supervisor: {    
+    supervisor: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',              
+        ref: 'User',
         required: true,
     },
     group: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Group',              
+        ref: 'Group',
         required: true,
     },
     latitude: {
@@ -46,6 +46,11 @@ const attendanceSessionSchema = new mongoose.Schema({
         type: Date,
         required: true,
     },
+    status: {
+        type: String,
+        enum: ['scheduled', 'ongoing', 'ended', 'cancelled'],
+        default: 'scheduled'
+    }
 }, { timestamps: true });
 
 export default mongoose.model('AttendanceSession', attendanceSessionSchema);
