@@ -210,7 +210,7 @@ export const getSupervisors = async (req, res) => {
             userType: supervisorType._id,
         }).select('-password');
 
-        res.status(200).json(sendResponse('Supervisors fetched successfully', { supervisors }));
+        res.status(200).json(sendResponse('Supervisors fetched successfully',  supervisors ));
     } catch (err) {
         console.error(err);
         res.status(500).json(sendError(err.message));
@@ -228,7 +228,7 @@ export const getOrganizationSupervisors = async (req, res) => {
             userType: supervisorType._id,
         }).select('-password');
 
-        res.status(200).json(sendResponse('Supervisors fetched successfully', { supervisors }));
+        res.status(200).json(sendResponse('Supervisors fetched successfully', supervisors ));
     } catch (err) {
         console.error(err);
         res.status(500).json(sendError(err.message));
