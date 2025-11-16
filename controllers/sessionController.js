@@ -117,8 +117,8 @@ export const getAllSessionForSupervisor = async (req, res) => {
             organization: authUser.organization,
             supervisor: authUser.id
         })
-            .populate('group')
-            .populate('supervisor')
+            // .populate('group')
+            // .populate('supervisor')
             .sort({ start_time: -1 });
 
         res.status(200).json(sendResponse('Sessions fetched successfully.', sessions));
