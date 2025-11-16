@@ -85,7 +85,7 @@ export const getTodaySessions = async (req, res) => {
             organization_id: user.organization_id,
             start_time: { $gte: today, $lt: tomorrow }
         })
-            .populate('group supervisor')
+            // .populate('group supervisor')
             .sort({ start_time: 1 })
             .lean(); // Important: returns plain JS objects
 
