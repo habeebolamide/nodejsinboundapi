@@ -72,3 +72,35 @@ export const getAll = async (req, res) => {
     }
 }
 
+export const getTodaySessions = async (req, res) => {
+    try {
+        const authUser = req.user;
+        const today = moment().startOf('day').toDate(); 
+
+        const sessions = await AttendanceSession.find({
+            organization_id: authUser.organization_id,
+            start_time: { $gte: today, $lt: moment(today).endOf('day').toDate() }
+        })
+        .populate('group')
+        .populate('supervisor')
+        .sort({ start_time: 1 }); 
+
+        const sessionsWithCheckinStatus = await Promise.all(sessions.map(async (session) => {
+            const checkin = await Checkin.findOne({
+                user_id: authUser.id,
+                attendance_session_id: session._id,
+                created_at: { $gte: moment().startOf('day').toDate(), $lt: moment().endOf('day').toDate() }
+            });
+
+            session.checkin_status = checkin ? 'yes' : 'no';
+
+            return session;
+        }));
+
+        return sendResponse(res, 'Today\'s sessions retrieved successfully.', sessionsWithCheckinStatus, 200);
+    } catch (err) {
+        console.error(err);
+        return sendResponse(res, 'Error retrieving sessions.', null, 500);
+    }
+};
+
