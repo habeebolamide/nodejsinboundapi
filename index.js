@@ -17,7 +17,7 @@ app.use(cors());
 app.use('/api/v1/organization', organizationRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/organization/groups', groupRoutes);
-app.use('/api/v1/organization/checkin', checkinRoutes);
+app.use('/api/v1/organization/sessions', checkinRoutes);
 
 
 // Set the port from environment variables or default to 3000
