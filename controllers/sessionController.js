@@ -6,34 +6,63 @@ import GroupUser from "../models/groupUser.js";
 import Checkin from "../models/checkin.js";
 
 export const createSession = async (req, res) => {
-    const { group, supervisor, title, latitude, longitude, radius, start_time, end_time, building_name } = req.body;
-    const authUser = req.user;
 
-    const groups = await Group.findOne({ _id: group, organization: authUser.organization });
-    if (!groups) {
-        return res.status(403).json({ message: 'Invalid group for your organization.' });
+    try {
+        const { group, supervisor, title, latitude, longitude, radius, start_time, end_time, building_name } = req.body;
+        const authUser = req.user;
+
+        const groups = await Group.findOne({ _id: group, organization: authUser.organization });
+        if (!groups) {
+            return res.status(403).json({ message: 'Invalid group for your organization.' });
+        }
+
+        const supervisors = await User.findOne({ _id: supervisor, organization: authUser.organization });
+
+        if (!supervisors) {
+            return res.status(403).json({ message: 'Invalid supervisor for your organization.' });
+        }
+
+        const sessionExists = await AttendanceSession.findOne({
+            $or: [
+                {
+                    group,
+                    start_time: { $lt: end_time },
+                    end_time: { $gt: start_time },
+                    organization: authUser.organization
+                },
+                {
+                    supervisor,
+                    start_time: { $lt: end_time },
+                    end_time: { $gt: start_time },
+                    organization: authUser.organization
+                }
+            ]
+        });
+
+        if (sessionExists) {
+            return res.status(400).json({ message: 'A session with the same group or supervisor already exists during that time.' });
+        }
+
+
+        const session = await AttendanceSession.create({
+            group,
+            start_time,
+            supervisor,
+            organization: authUser.organization,
+            title,
+            latitude,
+            longitude,
+            radius: radius || 50,
+            end_time,
+            building_name,
+            status: 'scheduled'
+        });
+
+        res.status(201).json(sendResponse('Session created successfully.', session));
+    } catch (error) {
+        res.status(500).json(sendError(error.message));
     }
 
-    const supervisors = await User.findOne({ _id: supervisor, organization: authUser.organization });
-    if (!supervisors) {
-        return res.status(403).json({ message: 'Invalid supervisor for your organization.' });
-    }
-
-    const session = await AttendanceSession.create({
-        group,
-        start_time,
-        supervisor,
-        organization: authUser.organization,
-        title,
-        latitude,
-        longitude,
-        radius: radius || 50,
-        end_time,
-        building_name,
-        status: 'scheduled'
-    });
-
-    res.status(201).json(sendResponse('Session created successfully.', session));
 }
 
 export const getAll = async (req, res) => {
@@ -53,7 +82,7 @@ export const getAll = async (req, res) => {
 
         if (authUser.userType.name === 'supervisor') {
             sessionsQuery = sessionsQuery.where('supervisor').equals(authUser._id);
-        } 
+        }
         if (authUser.userType.name === 'admin') {
             sessionsQuery = sessionsQuery.populate('group').populate('supervisor');
         }
@@ -127,4 +156,62 @@ export const getAllSessionForSupervisor = async (req, res) => {
     } catch (err) {
         res.status(500).json(sendError(err.message));
     }
+}
+
+export const startSession = async (req, res) => {
+    try {
+        const { sessionId } = req.body;
+
+        const session = await AttendanceSession.findOne({
+            _id: sessionId,
+        });
+
+        if (!session) {
+            return res.status(404).json(sendError('Session not found.'));
+        }
+
+        if (session.status !== 'scheduled') {
+            return res.status(400).json(sendError('Only scheduled sessions can be started.'));
+        }
+
+        if (new Date() < new Date(session.start_time) || new Date() > new Date(session.end_time)) {
+            return res.status(400).json(sendError('Session can only be started within the scheduled time range'));
+        }
+
+        session.status = 'ongoing';
+        await session.save();
+
+        res.status(200).json(sendResponse('Session started successfully.', session));
+    } catch (err) {
+        res.status(500).json(sendError(err.message));
+    }
+}
+
+export const endSession = async (req, res) => {
+    try {
+        const { sessionId } = req.body;
+
+        const session = await AttendanceSession.findOne({
+            _id: sessionId,
+        });
+
+        if (!session) {
+            return res.status(404).json(sendError('Session not found.'));
+        }
+
+        if (session.status !== 'ongoing') {
+            return res.status(400).json(sendError('Only ongoing sessions can be ended.'));
+        }
+
+        session.status = 'ended';
+        await session.save();
+
+        res.status(200).json(sendResponse('Session ended successfully.', session));
+    } catch (err) {
+        res.status(500).json(sendError(err.message));
+    }
+}
+
+export const CheckIntoSession = async (req, res) => {
+
 }

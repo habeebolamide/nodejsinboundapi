@@ -1,13 +1,11 @@
-export const sendResponse = (message, data, status = 200) => ({
+export const sendResponse = (message, data) => ({
   success: true,
   message,
   data,
-  status,
 });
 
-export const sendError = (message, errors = {}, status = 400) => ({
+export const sendError = (message, errors = {}) => ({
   success: false,
   message,
   errors,
-  status,
 });
