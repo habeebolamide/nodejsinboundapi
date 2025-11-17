@@ -215,3 +215,59 @@ export const endSession = async (req, res) => {
 export const CheckIntoSession = async (req, res) => {
 
 }
+
+export const Supervisorcreate = async (req, res) => {   
+    try {
+        const { group, title, latitude, longitude, radius, start_time, end_time, building_name } = req.body;
+        const authUser = req.user;
+
+        const groups = await Group.findOne({ _id: group, organization: authUser.organization });
+        if (!groups) {
+            return res.status(403).json({ message: 'Invalid group for your organization.' });
+        }
+
+        if (authUser.role !== 'supervisor') {
+            return res.status(403).json({ message: 'Only supervisors can create sessions.' });
+        }
+
+        const sessionExists = await AttendanceSession.findOne({
+            $or: [
+                {
+                    group,
+                    start_time: { $lt: end_time },
+                    end_time: { $gt: start_time },
+                    organization: authUser.organization
+                },
+                {
+                    supervisor : authUser.id,
+                    start_time: { $lt: end_time },
+                    end_time: { $gt: start_time },
+                    organization: authUser.organization
+                }
+            ]
+        });
+
+        if (sessionExists) {
+            return res.status(400).json({ message: 'A session with the same group or supervisor already exists during that time.' });
+        }
+
+        const session = await AttendanceSession.create({
+            group,
+            start_time,
+            supervisor : authUser.id,
+            organization: authUser.organization,
+            title,
+            latitude,
+            longitude,
+            radius: radius || 50,
+            end_time,
+            building_name,
+            status: 'scheduled'
+        });
+
+        res.status(201).json(sendResponse('Session created successfully.', session));
+    } catch (error) {
+        
+        res.status(500).json(sendError(error.message));
+    }
+}
