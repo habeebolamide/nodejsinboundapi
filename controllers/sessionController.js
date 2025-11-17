@@ -105,22 +105,28 @@ export const getTodaySessions = async (req, res) => {
         const user = req.user;
         if (!user?.organization) return res.status(401).json(sendResponse('Unauthorized', null, 401));
 
-        // UTC+1 Today: 00:00 to 23:59:59.999
+
+        const userDoc = await User.findById(user._id).select('groups').lean();
+        if (!userDoc || !userDoc.groups || userDoc.groups.length === 0) {
+            return res.json(sendResponse("No groups found for user", []));
+        }
+
+        const userGroupIds = userDoc.groups.map(g => g._id || g);
+
         const now = new Date();
-        const offset = 60; // UTC+1 in minutes
+        const offset = 60;
         const today = new Date(now.getTime() + offset * 60000);
         today.setUTCHours(0, 0, 0, 0);
         const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
 
         const sessions = await AttendanceSession.find({
             organization_id: user.organization_id,
+            group: { $in: userGroupIds },
             start_time: { $gte: today, $lt: tomorrow }
         })
-            // .populate('group supervisor')
             .sort({ start_time: 1 })
-            .lean(); // Important: returns plain JS objects
+            .lean(); 
 
-        // Add checkin_status in parallel
         const results = await Promise.all(
             sessions.map(async (s) => {
                 const hasCheckin = await Checkin.exists({
@@ -216,7 +222,7 @@ export const CheckIntoSession = async (req, res) => {
 
 }
 
-export const Supervisorcreate = async (req, res) => {   
+export const Supervisorcreate = async (req, res) => {
     try {
         const { group, title, latitude, longitude, radius, start_time, end_time, building_name } = req.body;
         const authUser = req.user;
@@ -239,7 +245,7 @@ export const Supervisorcreate = async (req, res) => {
                     organization: authUser.organization
                 },
                 {
-                    supervisor : authUser.id,
+                    supervisor: authUser.id,
                     start_time: { $lt: end_time },
                     end_time: { $gt: start_time },
                     organization: authUser.organization
@@ -254,7 +260,7 @@ export const Supervisorcreate = async (req, res) => {
         const session = await AttendanceSession.create({
             group,
             start_time,
-            supervisor : authUser.id,
+            supervisor: authUser.id,
             organization: authUser.organization,
             title,
             latitude,
@@ -267,7 +273,7 @@ export const Supervisorcreate = async (req, res) => {
 
         res.status(201).json(sendResponse('Session created successfully.', session));
     } catch (error) {
-        
+
         res.status(500).json(sendError(error.message));
     }
 }
