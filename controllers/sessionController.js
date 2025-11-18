@@ -4,6 +4,7 @@ import AttendanceSession from "../models/attendanceSession.js";
 import { sendError, sendResponse } from "../helpers/helper.js";
 import GroupUser from "../models/groupUser.js";
 import Checkin from "../models/checkin.js";
+import { DateTime } from "luxon";
 
 export const createSession = async (req, res) => {
 
@@ -104,7 +105,7 @@ export const getTodaySessions = async (req, res) => {
     try {
         const user = req.user;
         if (!user?.organization) return res.status(401).json(sendResponse('Unauthorized', null, 401));
-        
+
         const userGroups = await GroupUser.find({ user: user.id });
 
         if (!userGroups || userGroups.length === 0) {
@@ -126,7 +127,7 @@ export const getTodaySessions = async (req, res) => {
             start_time: { $gte: today, $lt: tomorrow }
         })
             .sort({ start_time: 1 })
-            .lean(); 
+            .lean();
 
         const results = await Promise.all(
             sessions.map(async (s) => {
@@ -178,12 +179,16 @@ export const startSession = async (req, res) => {
         }
 
         if (session.status !== 'scheduled') {
-            session.status = 'ended';
-            await session.save();
+            // session.status = 'ended';
+            // await session.save();
             return res.status(400).json(sendError('Only scheduled sessions can be started.'));
         }
 
-        if (new Date() < new Date(session.start_time) || new Date() > new Date(session.end_time)) {
+        const currentTime = DateTime.now().setZone('Africa/Lagos').toISO();
+
+        if (currentTime < new Date(session.start_time) || new Date() > new Date(session.end_time)) {
+            console.log(new Date(session.start_time));
+
             return res.status(400).json(sendError('Session can only be started within the scheduled time range'));
         }
 
@@ -222,7 +227,54 @@ export const endSession = async (req, res) => {
 }
 
 export const CheckIntoSession = async (req, res) => {
+    const { sessionId } = req.body;
+    const authUser = req.user;
 
+    try {
+        const session = await AttendanceSession.findById(sessionId);
+        if (!session) {
+            return res.status(404).json(sendError('Session not found.'));
+        }
+
+        const now = new Date();
+        if (now < new Date(session.start_time) || now > new Date(session.end_time)) {
+            return res.status(400).json(sendError('Check-in is only allowed during the session time.'));
+        }
+
+        const distance = calculateDistance(
+            session.latitude,
+            session.longitude,
+            req.body.latitude,
+            req.body.longitude
+        );
+
+        if (distance > session.radius) {
+            return res.status(400).json(sendError('You are outside the allowed check-in radius.'));
+        }
+
+        const existingCheckin = await Checkin.findOne({
+            user_id: authUser.id,
+            attendance_session_id: sessionId,
+            created_at: {
+                $gte: new Date(now.setHours(0, 0, 0, 0)),
+                $lt: new Date(now.setHours(23, 59, 59, 999))
+            }
+        });
+
+        if (existingCheckin) {
+            return res.status(400).json(sendError('You have already checked into this session today.'));
+        }
+
+        const checkin = await Checkin.create({
+            user: authUser.id,
+            attendance_session: sessionId,
+            checked_in_at: new Date(),
+        });
+
+        res.status(201).json(sendResponse('Check-in successful.', checkin));
+    } catch (error) {
+        res.status(500).json(sendError(error.message));
+    }
 }
 
 export const Supervisorcreate = async (req, res) => {

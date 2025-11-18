@@ -7,7 +7,7 @@ const checkinSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User', 
         required: true,
-        index: true, // Optional: if you want to optimize queries filtering by user_id
+        index: true, 
     },
     attendance_session: {
         type: mongoose.Schema.Types.ObjectId,
