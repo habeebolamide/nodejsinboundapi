@@ -104,6 +104,7 @@ export const getAll = async (req, res) => {
 export const getTodaySessions = async (req, res) => {
     try {
         const user = req.user;
+
         if (!user?.organization) return res.status(401).json(sendResponse('Unauthorized', null, 401));
 
         const userGroups = await GroupUser.find({ user: user.id });
@@ -121,10 +122,13 @@ export const getTodaySessions = async (req, res) => {
         const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
 
         const sessions = await AttendanceSession.find({
-            organization_id: user.organization_id,
+            organization: user.organization,
             group: { $in: userGroupIds },
             status: { $ne: 'cancelled' },
-            start_time: { $gte: today, $lt: tomorrow }
+            $or: [
+                { start_time: { $gte: today, $lt: tomorrow } },  
+                { end_time: { $gte: today, $lt: tomorrow } }     
+            ],
         })
             .sort({ start_time: 1 })
             .lean();
