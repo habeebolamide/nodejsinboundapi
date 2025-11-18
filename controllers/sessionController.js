@@ -104,14 +104,14 @@ export const getTodaySessions = async (req, res) => {
     try {
         const user = req.user;
         if (!user?.organization) return res.status(401).json(sendResponse('Unauthorized', null, 401));
+        
+        const userGroups = await GroupUser.find({ user: user.id });
 
-
-        const userDoc = await User.findById(user._id).select('groups').lean();
-        if (!userDoc || !userDoc.groups || userDoc.groups.length === 0) {
-            return res.json(sendResponse("No groups found for user", []));
+        if (!userGroups || userGroups.length === 0) {
+            return res.status(404).json(sendResponse("No groups found for user", []));
         }
 
-        const userGroupIds = userDoc.groups.map(g => g._id || g);
+        const userGroupIds = userGroups.map(g => g.group || g);
 
         const now = new Date();
         const offset = 60;
