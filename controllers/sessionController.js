@@ -122,6 +122,7 @@ export const getTodaySessions = async (req, res) => {
         const sessions = await AttendanceSession.find({
             organization_id: user.organization_id,
             group: { $in: userGroupIds },
+            status: { $ne: 'cancelled' },
             start_time: { $gte: today, $lt: tomorrow }
         })
             .sort({ start_time: 1 })
@@ -177,6 +178,8 @@ export const startSession = async (req, res) => {
         }
 
         if (session.status !== 'scheduled') {
+            session.status = 'ended';
+            await session.save();
             return res.status(400).json(sendError('Only scheduled sessions can be started.'));
         }
 
@@ -242,12 +245,14 @@ export const Supervisorcreate = async (req, res) => {
                     group,
                     start_time: { $lt: end_time },
                     end_time: { $gt: start_time },
+                    status: { $ne: 'cancelled' },
                     organization: authUser.organization
                 },
                 {
                     supervisor: authUser.id,
                     start_time: { $lt: end_time },
                     end_time: { $gt: start_time },
+                    status: { $ne: 'cancelled' },
                     organization: authUser.organization
                 }
             ]
