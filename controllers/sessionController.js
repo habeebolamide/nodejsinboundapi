@@ -1,7 +1,7 @@
 import Group from "../models/group.js";
 import User from "../models/users.js";
 import AttendanceSession from "../models/attendanceSession.js";
-import { sendError, sendResponse } from "../helpers/helper.js";
+import { calculateDistance, sendError, sendResponse } from "../helpers/helper.js";
 import GroupUser from "../models/groupUser.js";
 import Checkin from "../models/checkin.js";
 import { DateTime } from "luxon";
@@ -187,8 +187,6 @@ export const startSession = async (req, res) => {
         const currentTime = DateTime.now().setZone('Africa/Lagos').toISO();
 
         if (currentTime < new Date(session.start_time) || new Date() > new Date(session.end_time)) {
-            console.log(new Date(session.start_time));
-
             return res.status(400).json(sendError('Session can only be started within the scheduled time range'));
         }
 
@@ -236,7 +234,7 @@ export const CheckIntoSession = async (req, res) => {
             return res.status(404).json(sendError('Session not found.'));
         }
 
-        const now = new Date();
+        const now = DateTime.now().setZone('Africa/Lagos').toISO();;
         if (now < new Date(session.start_time) || now > new Date(session.end_time)) {
             return res.status(400).json(sendError('Check-in is only allowed during the session time.'));
         }
@@ -255,10 +253,6 @@ export const CheckIntoSession = async (req, res) => {
         const existingCheckin = await Checkin.findOne({
             user_id: authUser.id,
             attendance_session_id: sessionId,
-            created_at: {
-                $gte: new Date(now.setHours(0, 0, 0, 0)),
-                $lt: new Date(now.setHours(23, 59, 59, 999))
-            }
         });
 
         if (existingCheckin) {
