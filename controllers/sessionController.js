@@ -132,9 +132,8 @@ export const getTodaySessions = async (req, res) => {
         const results = await Promise.all(
             sessions.map(async (s) => {
                 const hasCheckin = await Checkin.exists({
-                    user_id: user._id,
-                    attendance_session_id: s._id,
-                    created_at: { $gte: today, $lt: tomorrow }
+                    user: user.id,
+                    attendance_session: s._id,
                 });
                 s.checkin_status = hasCheckin ? 'yes' : 'no';
                 return s;
