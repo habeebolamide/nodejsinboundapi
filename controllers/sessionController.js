@@ -48,14 +48,14 @@ export const createSession = async (req, res) => {
 
         const session = await AttendanceSession.create({
             group,
-            start_time: DateTime.fromJSDate(new Date(start_time)).setZone(timezone).toJSDate(),
+            start_time: DateTime.fromJSDate(new Date(start_time)).setZone('Africa/Lagos').toISO(),
             supervisor,
             organization: authUser.organization,
             title,
             latitude,
             longitude,
             radius: radius || 50,
-            end_time: DateTime.fromJSDate(new Date(end_time)).setZone('Africa/Lagos').toJSDate(),
+            end_time: DateTime.fromJSDate(new Date(end_time)).setZone('Africa/Lagos').toISO(),
             building_name,
             status: 'scheduled'
         });
@@ -205,7 +205,7 @@ export const startSession = async (req, res) => {
         console.log(currentTime);
         console.log(startTime);
         console.log(endTime);
-
+        return ;
         if (currentTime < startTime) {
             return res.status(400).json(sendError('Session cannot be started before its scheduled start time.'));
         }
