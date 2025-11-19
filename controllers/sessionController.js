@@ -173,7 +173,7 @@ export const getAllSessionForSupervisor = async (req, res) => {
 
 export const startSession = async (req, res) => {
     try {
-        const { sessionId } = req.body;
+        const { sessionId,userTimezone } = req.body;
 
         const session = await AttendanceSession.findOne({
             _id: sessionId,
@@ -184,15 +184,24 @@ export const startSession = async (req, res) => {
         }
 
         if (session.status !== 'scheduled') {
-            // session.status = 'ended';
-            // await session.save();
             return res.status(400).json(sendError('Only scheduled sessions can be started.'));
         }
 
-        const currentTime = DateTime.now().setZone('Africa/Lagos').toISO();
 
-        if (currentTime < new Date(session.start_time) || new Date() > new Date(session.end_time)) {
-            return res.status(400).json(sendError('Session can only be started within the scheduled time range'));
+        const currentTime = DateTime.now().setZone(userTimezone || 'Africa/Lagos');
+
+        const startTime = DateTime.fromJSDate(session.start_time, { zone: 'utc' }).setZone(userTimezone || 'Africa/Lagos');
+
+        const endTime = DateTime.fromJSDate(session.end_time, { zone: 'utc' }).setZone(userTimezone || 'Africa/Lagos');
+
+        if (currentTime < startTime) {
+            return res.status(400).json(sendError('Session cannot be started before its scheduled start time.'));
+        }
+
+        if (endTime < currentTime) {
+            session.status = 'ended';
+            await session.save();
+            return res.status(400).json(sendError('Session has already ended.'));
         }
 
         session.status = 'ongoing';
@@ -230,7 +239,7 @@ export const endSession = async (req, res) => {
 }
 
 export const CheckIntoSession = async (req, res) => {
-    const { sessionId } = req.body;
+    const { sessionId, userTimezone } = req.body;
     const authUser = req.user;
 
     try {
@@ -239,8 +248,14 @@ export const CheckIntoSession = async (req, res) => {
             return res.status(404).json(sendError('Session not found.'));
         }
 
-        const now = DateTime.now().setZone('Africa/Lagos').toISO();;
-        if (now < new Date(session.start_time) || now > new Date(session.end_time)) {
+        const currentTime = DateTime.now().setZone(userTimezone || 'Africa/Lagos');
+
+        const startTime = DateTime.fromJSDate(session.start_time, { zone: 'utc' }).setZone(userTimezone || 'Africa/Lagos');
+
+        const endTime = DateTime.fromJSDate(session.end_time, { zone: 'utc' }).setZone(userTimezone || 'Africa/Lagos');
+
+        
+        if (currentTime < startTime || now > endTime) {
             return res.status(400).json(sendError('Check-in is only allowed during the session time.'));
         }
 
