@@ -48,14 +48,20 @@ export const createSession = async (req, res) => {
 
         const session = await AttendanceSession.create({
             group,
-            start_time: DateTime.fromJSDate(new Date(start_time)).setZone('Africa/Lagos').toISO(),
+            start_time: DateTime.fromJSDate(new Date(start_time))
+                        .setZone(timezone) 
+                        .toUTC()
+                        .toJSDate(),
             supervisor,
             organization: authUser.organization,
             title,
             latitude,
             longitude,
             radius: radius || 50,
-            end_time: DateTime.fromJSDate(new Date(end_time)).setZone('Africa/Lagos').toISO(),
+            end_time: DateTime.fromJSDate(new Date(end_time))
+                        .setZone(timezone) // Convert to Lagos time
+                        .toUTC() // Convert to UTC for storage
+                        .toJSDate(),
             building_name,
             status: 'scheduled'
         });
