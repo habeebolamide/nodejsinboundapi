@@ -18,6 +18,16 @@ export const createSession = async (req, res) => {
         if (!groups) {
             return res.status(403).json({ message: 'Invalid group for your organization.' });
         }
+
+        const startTime = DateTime.fromJSDate(new Date(start_time))
+                        .setZone(timezone) 
+                        .toUTC()
+                        .toJSDate();
+        const endTime = DateTime.fromJSDate(new Date(end_time))
+                        .setZone(timezone) 
+                        .toUTC()
+                        .toJSDate();
+        
         const supervisors = await User.findOne({ _id: supervisor, organization: authUser.organization });
 
         if (!supervisors) {
@@ -48,20 +58,14 @@ export const createSession = async (req, res) => {
 
         const session = await AttendanceSession.create({
             group,
-            start_time: DateTime.fromJSDate(new Date(start_time))
-                        .setZone(timezone) 
-                        .toUTC()
-                        .toJSDate(),
+            start_time:startTime,
             supervisor,
             organization: authUser.organization,
             title,
             latitude,
             longitude,
             radius: radius || 50,
-            end_time: DateTime.fromJSDate(new Date(end_time))
-                        .setZone(timezone) // Convert to Lagos time
-                        .toUTC() // Convert to UTC for storage
-                        .toJSDate(),
+            end_time:endTime,
             building_name,
             status: 'scheduled'
         });
@@ -208,10 +212,6 @@ export const startSession = async (req, res) => {
             keepLocalTime: true   // ← THIS IS THE KEY
         });
 
-        console.log(currentTime);
-        console.log(startTime);
-        console.log(endTime);
-        return ;
         if (currentTime < startTime) {
             return res.status(400).json(sendError('Session cannot be started before its scheduled start time.'));
         }
@@ -344,16 +344,25 @@ export const Supervisorcreate = async (req, res) => {
             return res.status(400).json({ message: 'A session with the same group or supervisor already exists during that time.' });
         }
 
+        const startTime = DateTime.fromJSDate(new Date(start_time))
+                        .setZone(timezone) 
+                        .toUTC()
+                        .toJSDate();
+        const endTime = DateTime.fromJSDate(new Date(end_time))
+                        .setZone(timezone) 
+                        .toUTC()
+                        .toJSDate();
+
         const session = await AttendanceSession.create({
             group,
-            start_time,
+            start_time : startTime,
             supervisor: authUser.id,
             organization: authUser.organization,
             title,
             latitude,
             longitude,
             radius: radius || 50,
-            end_time,
+            end_time: endTime,
             building_name,
             status: 'scheduled'
         });
