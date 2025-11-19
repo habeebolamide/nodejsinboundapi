@@ -309,9 +309,9 @@ export const CheckIntoSession = async (req, res) => {
 
 export const Supervisorcreate = async (req, res) => {
     try {
-        const { group, title, latitude, longitude, radius, start_time, end_time, building_name } = req.body;
+        const { group, title, latitude, longitude, radius, start_time, end_time, building_name,userTimezone } = req.body;
         const authUser = req.user;
-
+        const timezone = userTimezone || 'Africa/Lagos';
         const groups = await Group.findOne({ _id: group, organization: authUser.organization });
         if (!groups) {
             return res.status(403).json({ message: 'Invalid group for your organization.' });
