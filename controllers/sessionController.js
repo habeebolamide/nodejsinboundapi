@@ -9,14 +9,15 @@ import { DateTime } from "luxon";
 export const createSession = async (req, res) => {
 
     try {
-        const { group, supervisor, title, latitude, longitude, radius, start_time, end_time, building_name } = req.body;
+        const { group, supervisor, title, latitude, longitude, radius, start_time, end_time, building_name, userTimezone } = req.body;
+
+        const timezone = userTimezone || 'Africa/Lagos';
         const authUser = req.user;
 
         const groups = await Group.findOne({ _id: group, organization: authUser.organization });
         if (!groups) {
             return res.status(403).json({ message: 'Invalid group for your organization.' });
         }
-
         const supervisors = await User.findOne({ _id: supervisor, organization: authUser.organization });
 
         if (!supervisors) {
@@ -47,14 +48,14 @@ export const createSession = async (req, res) => {
 
         const session = await AttendanceSession.create({
             group,
-            start_time,
+            start_time: DateTime.fromJSDate(new Date(start_time)).setZone(timezone).toJSDate(),
             supervisor,
             organization: authUser.organization,
             title,
             latitude,
             longitude,
             radius: radius || 50,
-            end_time,
+            end_time: DateTime.fromJSDate(new Date(end_time)).setZone('Africa/Lagos').toJSDate(),
             building_name,
             status: 'scheduled'
         });
@@ -191,15 +192,20 @@ export const startSession = async (req, res) => {
 
 
         const currentTime = DateTime.now().setZone(timezone);
-        const startTime = DateTime.fromJSDate(session.start_time, { zone: timezone });
-        const endTime = DateTime.fromJSDate(session.end_time, { zone: timezone });
+        const startTime = DateTime.fromJSDate(session.start_time, {
+            zone: timezone,
+            keepLocalTime: true   // ← THIS IS THE KEY
+        });
 
+        const endTime = DateTime.fromJSDate(session.end_time, {
+            zone: timezone,
+            keepLocalTime: true   // ← THIS IS THE KEY
+        });
 
-        // console.log('Current Time:', currentTime);
-        // console.log('Start Time:  ', startTime);
-        // console.log('End Time:    ', endTime);
+        console.log(currentTime);
+        console.log(startTime);
+        console.log(endTime);
 
-        // return res.status(400).json(sendError('Session cannot be started before its scheduled start time.'));
         if (currentTime < startTime) {
             return res.status(400).json(sendError('Session cannot be started before its scheduled start time.'));
         }
@@ -245,12 +251,11 @@ export const endSession = async (req, res) => {
 }
 
 export const CheckIntoSession = async (req, res) => {
-    const { sessionId, userTimezone } = req.body;
-    const authUser = req.user;
-
-    const timezone = userTimezone || 'Africa/Lagos';
-
     try {
+        const { sessionId, userTimezone } = req.body;
+        const authUser = req.user;
+
+        const timezone = userTimezone || 'Africa/Lagos';
         const session = await AttendanceSession.findById(sessionId);
         if (!session) {
             return res.status(404).json(sendError('Session not found.'));
@@ -260,7 +265,7 @@ export const CheckIntoSession = async (req, res) => {
         const startTime = DateTime.fromJSDate(session.start_time, { zone: timezone });
         const endTime = DateTime.fromJSDate(session.end_time, { zone: timezone });
 
-        if (currentTime < startTime || now > endTime) {
+        if (currentTime < startTime || currentTime > endTime) {
             return res.status(400).json(sendError('Check-in is only allowed during the session time.'));
         }
 
