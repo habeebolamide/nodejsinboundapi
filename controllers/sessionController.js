@@ -72,17 +72,19 @@ export const getAll = async (req, res) => {
     try {
         const authUser = await User.findById(authUserid).populate('userType');
 
-
         const groupUsers = await GroupUser.find({ user: authUser._id }).populate('group');
         const groupIds = groupUsers.map(groupUser => groupUser.group._id);
 
         let sessionsQuery = AttendanceSession.find({ organization: authUser.organization })
-            // .populate('group')
-            // .populate('supervisor')
             .sort({ start_time: -1 });
 
         if (authUser.userType.name === 'supervisor') {
-            sessionsQuery = sessionsQuery.where('supervisor').equals(authUser._id);
+            sessionsQuery = sessionsQuery.where({
+                $or: [
+                    { supervisor: authUser._id },
+                    { group: { $in: groupIds } }
+                ]
+            });
         }
         if (authUser.userType.name === 'admin') {
             sessionsQuery = sessionsQuery.populate('group').populate('supervisor');
@@ -126,8 +128,8 @@ export const getTodaySessions = async (req, res) => {
             group: { $in: userGroupIds },
             status: { $ne: 'cancelled' },
             $or: [
-                { start_time: { $gte: today, $lt: tomorrow } },  
-                { end_time: { $gte: today, $lt: tomorrow } }     
+                { start_time: { $gte: today, $lt: tomorrow } },
+                { end_time: { $gte: today, $lt: tomorrow } }
             ],
         })
             .sort({ start_time: 1 })
