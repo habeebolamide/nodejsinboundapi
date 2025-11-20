@@ -46,6 +46,10 @@ const attendanceSessionSchema = new mongoose.Schema({
         type: Date,
         required: true,
     },
+    timezone: {  
+        type: String,
+        required: true,
+    },
     status: {
         type: String,
         enum: ['scheduled', 'ongoing', 'ended', 'cancelled'],

@@ -20,14 +20,14 @@ export const createSession = async (req, res) => {
         }
 
         const startTime = DateTime.fromJSDate(new Date(start_time))
-                        .setZone(timezone) 
-                        .toUTC()
-                        .toJSDate();
+            .setZone(timezone)
+            .toUTC()
+            .toJSDate();
         const endTime = DateTime.fromJSDate(new Date(end_time))
-                        .setZone(timezone) 
-                        .toUTC()
-                        .toJSDate();
-        
+            .setZone(timezone)
+            .toUTC()
+            .toJSDate();
+
         const supervisors = await User.findOne({ _id: supervisor, organization: authUser.organization });
 
         if (!supervisors) {
@@ -58,15 +58,16 @@ export const createSession = async (req, res) => {
 
         const session = await AttendanceSession.create({
             group,
-            start_time:startTime,
+            start_time: startTime,
             supervisor,
             organization: authUser.organization,
             title,
             latitude,
             longitude,
             radius: radius || 50,
-            end_time:endTime,
+            end_time: endTime,
             building_name,
+            timezone: timezone,
             status: 'scheduled'
         });
 
@@ -82,6 +83,7 @@ export const getAll = async (req, res) => {
 
     try {
         const authUser = await User.findById(authUserid).populate('userType');
+        const userTimezone = authUser.timezone || 'Africa/Lagos';  // Default to 'Africa/Lagos' if timezone not provided
 
         const groupUsers = await GroupUser.find({ user: authUser._id }).populate('group');
         const groupIds = groupUsers.map(groupUser => groupUser.group._id);
@@ -99,20 +101,28 @@ export const getAll = async (req, res) => {
         }
         if (authUser.userType.name === 'admin') {
             sessionsQuery = sessionsQuery.populate('group').populate('supervisor');
-        }
-        else if (authUser.userType.name === 'member') {
+        } else if (authUser.userType.name === 'member') {
             sessionsQuery = sessionsQuery.where('group').in(groupIds);
         }
 
         const sessions = await sessionsQuery.exec();
 
-        res.status(200).json(sendResponse('Sessions fetched successfully.', sessions));
+        const sessionsWithConvertedTimes = sessions.map(s => {
+            const startTimeInUserTimezone = DateTime.fromJSDate(s.start_time).setZone(userTimezone);
+            const endTimeInUserTimezone = DateTime.fromJSDate(s.end_time).setZone(userTimezone);
 
+            s.start_time = startTimeInUserTimezone.toISO();  
+            s.end_time = endTimeInUserTimezone.toISO();     
+
+            return s;
+        });
+
+        res.status(200).json(sendResponse('Sessions fetched successfully.', sessionsWithConvertedTimes));
     } catch (err) {
         // Handle errors
         res.status(500).json(sendError(err.message));
     }
-}
+};
 
 export const getTodaySessions = async (req, res) => {
     try {
@@ -127,6 +137,7 @@ export const getTodaySessions = async (req, res) => {
         }
 
         const userGroupIds = userGroups.map(g => g.group || g);
+        const userTimezone = user.timezone || 'Africa/Lagos';  // Default to 'Africa/Lagos' if timezone not provided
 
         const now = new Date();
         const offset = 60;
@@ -153,10 +164,16 @@ export const getTodaySessions = async (req, res) => {
                     attendance_session: s._id,
                 });
                 s.checkin_status = hasCheckin ? 'yes' : 'no';
+
+                const startTimeInUserTimezone = DateTime.fromJSDate(s.start_time).setZone(userTimezone);
+                const endTimeInUserTimezone = DateTime.fromJSDate(s.end_time).setZone(userTimezone);
+
+                s.start_time = startTimeInUserTimezone.toISO(); 
+                s.end_time = endTimeInUserTimezone.toISO();   
+
                 return s;
             })
         );
-
         res.json(sendResponse("Today's sessions retrieved successfully.", results));
     } catch (err) {
         console.error(err);
@@ -309,7 +326,7 @@ export const CheckIntoSession = async (req, res) => {
 
 export const Supervisorcreate = async (req, res) => {
     try {
-        const { group, title, latitude, longitude, radius, start_time, end_time, building_name,userTimezone } = req.body;
+        const { group, title, latitude, longitude, radius, start_time, end_time, building_name, userTimezone } = req.body;
         const authUser = req.user;
         const timezone = userTimezone || 'Africa/Lagos';
         const groups = await Group.findOne({ _id: group, organization: authUser.organization });
@@ -345,17 +362,17 @@ export const Supervisorcreate = async (req, res) => {
         }
 
         const startTime = DateTime.fromJSDate(new Date(start_time))
-                        .setZone(timezone) 
-                        .toUTC()
-                        .toJSDate();
+            .setZone(timezone)
+            .toUTC()
+            .toJSDate();
         const endTime = DateTime.fromJSDate(new Date(end_time))
-                        .setZone(timezone) 
-                        .toUTC()
-                        .toJSDate();
+            .setZone(timezone)
+            .toUTC()
+            .toJSDate();
 
         const session = await AttendanceSession.create({
             group,
-            start_time : startTime,
+            start_time: startTime,
             supervisor: authUser.id,
             organization: authUser.organization,
             title,
