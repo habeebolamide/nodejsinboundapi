@@ -381,7 +381,8 @@ export const Supervisorcreate = async (req, res) => {
             radius: radius || 50,
             end_time: endTime,
             building_name,
-            status: 'scheduled'
+            status: 'scheduled',
+            timezone: timezone,
         });
 
         res.status(201).json(sendResponse('Session created successfully.', session));
