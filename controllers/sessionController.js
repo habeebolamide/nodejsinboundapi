@@ -250,8 +250,11 @@ export const startSession = async (req, res) => {
 
 export const endSession = async (req, res) => {
     try {
-        const { sessionId } = req.body;
+        const { sessionId,userTimezone } = req.body;
 
+
+        const timezone = userTimezone || 'Africa/Lagos';
+        
         const session = await AttendanceSession.findOne({
             _id: sessionId,
         });
