@@ -189,8 +189,6 @@ export const getAllSessionForSupervisor = async (req, res) => {
             organization: authUser.organization,
             supervisor: authUser.id
         })
-            // .populate('group')
-            // .populate('supervisor')
             .sort({ start_time: -1 });
 
         res.status(200).json(sendResponse('Sessions fetched successfully.', sessions));
@@ -254,7 +252,7 @@ export const endSession = async (req, res) => {
 
 
         const timezone = userTimezone || 'Africa/Lagos';
-        
+
         const session = await AttendanceSession.findOne({
             _id: sessionId,
         });
@@ -271,6 +269,34 @@ export const endSession = async (req, res) => {
         await session.save();
 
         res.status(200).json(sendResponse('Session ended successfully.', session));
+    } catch (err) {
+        res.status(500).json(sendError(err.message));
+    }
+}
+
+export const cancelSession = async (req, res) => {
+    try {
+        const { sessionId,userTimezone } = req.body;
+
+
+        const timezone = userTimezone || 'Africa/Lagos';
+
+        const session = await AttendanceSession.findOne({
+            _id: sessionId,
+        });
+
+        if (!session) {
+            return res.status(404).json(sendError('Session not found.'));
+        }
+
+        if (session.status !== 'scheduled') {
+            return res.status(400).json(sendError('Only scheduled sessions can be ended.'));
+        }
+
+        session.status = 'cancelled';
+        await session.save();
+
+        res.status(200).json(sendResponse('Session Cancelled successfully.', session));
     } catch (err) {
         res.status(500).json(sendError(err.message));
     }

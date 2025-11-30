@@ -4,6 +4,7 @@ import { protect } from '../middleware/auth.js';
 import { rateLimiter } from '../middleware/rateLimit.js';
 import { CheckIntoSession, createSession, endSession, getAll, getAllSessionForSupervisor, getTodaySessions, startSession, Supervisorcreate } from '../controllers/sessionController.js';
 import { validateCreateSession } from '../middleware/validateSession.js';
+import { ca } from 'date-fns/locale';
 
 const router = express.Router();
 
@@ -16,6 +17,7 @@ router
     .get('/get_sessions_for_supervisors',protect,getAllSessionForSupervisor)
     .post('/start_session',protect,startSession)
     .post('/end_session',protect,endSession)
+    .post('/cancel_session',protect,cancelSession)
     .post('/checkin',protect,CheckIntoSession)
     .post('/supervisor_create',protect,Supervisorcreate);
 export default router;
