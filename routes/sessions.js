@@ -4,7 +4,6 @@ import { protect } from '../middleware/auth.js';
 import { rateLimiter } from '../middleware/rateLimit.js';
 import { CheckIntoSession, createSession, endSession, getAll, getAllSessionForSupervisor, getTodaySessions, startSession, Supervisorcreate } from '../controllers/sessionController.js';
 import { validateCreateSession } from '../middleware/validateSession.js';
-import { ca } from 'date-fns/locale';
 
 const router = express.Router();
 
