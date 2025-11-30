@@ -2,7 +2,7 @@
 import express from 'express';
 import { protect } from '../middleware/auth.js';
 import { rateLimiter } from '../middleware/rateLimit.js';
-import { CheckIntoSession, createSession, endSession, getAll, getAllSessionForSupervisor, getTodaySessions, startSession, Supervisorcreate } from '../controllers/sessionController.js';
+import { cancelSession, CheckIntoSession, createSession, endSession, getAll, getAllSessionForSupervisor, getTodaySessions, startSession, Supervisorcreate } from '../controllers/sessionController.js';
 import { validateCreateSession } from '../middleware/validateSession.js';
 
 const router = express.Router();
